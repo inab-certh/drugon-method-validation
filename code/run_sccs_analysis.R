@@ -4,8 +4,11 @@ multiThreadingSettings <- createDefaultSccsMultiThreadingSettings(
   parallel::detectCores() - 1
 )
 
-outputFolder <- "./results/analyses/sccs"
-controlsFolder <- "./results"
+controlsFolder <- outputFolder
+outputFolder <- file.path(outputFolder, "analyses/sccs")
+
+if (!dir.exists(outputFolder)) dir.create(outputFolder, recursive = TRUE)
+message(paste("Created directory:", outputFolder))
 
 allControls <- readr::read_csv(file.path(controlsFolder, "allControls.csv"))
 
@@ -87,5 +90,29 @@ referenceTable <- runSccsAnalyses(
 )
 
 sccsSummary <- getResultsSummary(outputFolder)
+
+sccsSummary <- referenceTable |>
+  dplyr::select(exposuresOutcomeSetId, exposureId) |>
+  dplyr::left_join(sccsSummary)
+
 readr::write_csv(sccsSummary, file.path(outputFolder, "sccsSummary.csv"))
 
+analysisRef <- data.frame(
+  method = "SelfControlledCaseSeries",
+  analysisId = sccsAnalysis1$analysisId,
+  description = sccsAnalysis1$description,
+  details = "",
+  comparative = FALSE,
+  nesting = FALSE,
+  firstExposureOnly = FALSE
+)
+
+MethodEvaluation::packageOhdsiBenchmarkResults(
+  estimates = sccsSummary |> dplyr::rename(c("targetId" = "exposureId")),
+  controlSummary = allControls,
+  analysisRef = analysisRef,
+  databaseName = "PGH",
+  exportFolder = file.path(outputFolder, "export")
+)
+
+message(paste("Results saved at:", file.path(outputFolder, "export")))
