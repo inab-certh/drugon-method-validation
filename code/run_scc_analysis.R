@@ -1,7 +1,7 @@
 library(SelfControlledCohort)
 
-outputFolder <- "./results/analyses/scc"
-controlsFolder <- "./results"
+controlsFolder <- outputFolder
+outputFolder <- file.path(outputFolder, "analyses/scc")
 
 connectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = Sys.getenv("omop_db_dbms"),
@@ -10,7 +10,6 @@ connectionDetails <- DatabaseConnector::createConnectionDetails(
   password = Sys.getenv("omop_db_password"),
   pathToDriver = Sys.getenv("omop_db_driver")
 )
-
 
 runSccArgs1 <- SelfControlledCohort::createRunSelfControlledCohortArgs(
   addLengthOfExposureExposed = TRUE,
@@ -21,6 +20,7 @@ runSccArgs1 <- SelfControlledCohort::createRunSelfControlledCohortArgs(
   riskWindowStartUnexposed = -1,
   washoutPeriod = 0
 )
+
 sccAnalysis1 <- SelfControlledCohort::createSccAnalysis(
   analysisId = 1,
   description = "Length of exposure",
@@ -42,6 +42,7 @@ sccAnalysis2 <- createSccAnalysis(
   description = "30 days of each exposure",
   runSelfControlledCohortArgs = runSccArgs2
 )
+
 sccAnalysisList <- list(sccAnalysis1, sccAnalysis2)
 
 allControls <- readr::read_csv(file.path(controlsFolder, "allControls.csv"))
@@ -69,3 +70,43 @@ sccResult <- SelfControlledCohort::runSccAnalyses(
 
 sccSummary <- SelfControlledCohort::summarizeAnalyses(sccResult, outputFolder)
 readr::write_csv(sccSummary, file.path(outputFolder, "sccSummary.csv"))
+
+analysisRef <- data.frame(
+  method = "SelfControlledCohort",
+  analysisId = c(1, 2),
+  description = c(
+    "Length of exposure",
+    "30 days of each exposure"
+  ),
+  details = "",
+  comparative = FALSE,
+  nesting = FALSE,
+  firstExposureOnly = FALSE
+)
+
+estimates <- data.frame(
+  analysisId = sccSummary$analysisId,
+  targetId = sccSummary$exposureId,
+  outcomeId = sccSummary$outcomeId,
+  logRr = sccSummary$logRr,
+  seLogRr = sccSummary$seLogRr,
+  ci95Lb = sccSummary$irrLb95,
+  ci95Ub = sccSummary$irrUb95
+)
+
+MethodEvaluation::packageOhdsiBenchmarkResults(
+  estimates = estimates,
+  controlSummary = allControls,
+  analysisRef = analysisRef,
+  databaseName = "PGH",
+  exportFolder = file.path(outputFolder, "export")
+)
+
+# MethodEvaluation::computeOhdsiBenchmarkMetrics(
+#   exportFolder = file.path(outputFolder, "export"),
+#   mdrr = 5,
+#   stratum = "All",
+#   trueEffectSize = "Overall",
+#   calibrated = FALSE,
+#   comparative = FALSE
+# )

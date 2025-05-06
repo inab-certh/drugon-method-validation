@@ -86,14 +86,14 @@ referenceTable <- runSccsAnalyses(
   exposuresOutcomeList = exposuresOutcomeList,
   sccsAnalysisList = sccsAnalysisList,
   sccsMultiThreadingSettings = multiThreadingSettings,
-  controlType = "outcome"
+  controlType = "exposure"
 )
 
 sccsSummary <- getResultsSummary(outputFolder)
 
 sccsSummary <- referenceTable |>
   dplyr::select(exposuresOutcomeSetId, exposureId) |>
-  dplyr::left_join(sccsSummary)
+  dplyr::left_join(sccsSummary, by = "exposuresOutcomeSetId")
 
 readr::write_csv(sccsSummary, file.path(outputFolder, "sccsSummary.csv"))
 

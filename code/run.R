@@ -32,7 +32,7 @@ synthesizeReferenceSetPositiveControls(
   cdmDatabaseSchema = cdmDatabaseSchema,
   outcomeDatabaseSchema = outcomeDatabaseSchema,
   outcomeTable = outcomeTable,
-  maxCores = 10,
+  maxCores = 4,
   workFolder = outputFolder,
   summaryFileName = file.path(
     outputFolder,
