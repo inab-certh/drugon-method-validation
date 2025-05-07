@@ -1,55 +1,41 @@
-outputFolder <- "./results"
-
 analysisDirs <- list.dirs(
   file.path(outputFolder, "analyses"),
   recursive = FALSE
 )
 
+analysisRefCombined <- list.files(
+  path = file.path(analysisDirs, "export"),
+  pattern = "analysisRef.*csv",
+  full.names = TRUE
+) |>
+  purrr::map_dfr(readr::read_csv, show_col_types = FALSE)
+
+estimatesCombined <- list.files(
+  path = file.path(analysisDirs, "export"),
+  pattern = "estimates.*csv",
+  full.names = TRUE
+) |>
+  purrr::map_dfr(readr::read_csv, show_col_types = FALSE)
+
+metrics <- list()
+
 for (i in seq_along(analysisDirs)) {
 
-  summaryFiles <- list.files(
-    path = analysisDirs,
-    pattern = "*Summary.csv",
-    full.names = TRUE
+  exportFolder <- file.path(analysisDirs[i], "export")
+
+  metrics[[i]] <- MethodEvaluation::computeOhdsiBenchmarkMetrics(
+    exportFolder = exportFolder,
+    mdrr = 5,
+    stratum = "All",
+    trueEffectSize = "Overall",
+    calibrated = FALSE,
+    comparative = FALSE
   )
-
-  summariesCombined <- summaryFiles |>
-    purrr::map_dfr(readr::read_csv)
-
+ 
 }
 
-estimates <- summariesCombined |>
-  dplyr::select(analysisId, exposureId, exposureId, outcomeId, logRr, seLogRr)
+result <- dplyr::bind_rows(metrics)
 
-estimates <- readr::read_csv(file.path(outputFolder, "sccSummary.csv"))
-estimates <- data.frame(
-  analysisId = estimates$analysisId,
-  targetId = estimates$exposureId,
-  outcomeId = estimates$outcomeId,
-  logRr = estimates$logRr,
-  seLogRr = estimates$seLogRr,
-  ci95Lb = estimates$irrLb95,
-  ci95Ub = estimates$irrUb95
-)
-
-analysisRef <- data.frame(
-  method = "SelfControlledCohort",
-  analysisId = c(1, 2),
-  description = c(
-    "Length of exposure",
-    "30 days of each exposure"
-  ),
-  details = "",
-  comparative = FALSE,
-  nesting = FALSE,
-  firstExposureOnly = FALSE
-)
-
-allControls <- read.csv(file.path(outputFolder, "allControls.csv"))
-packageOhdsiBenchmarkResults(
-  estimates = estimates,
-  controlSummary = allControls,
-  analysisRef = analysisRef,
-  databaseName = databaseName,
-  exportFolder = file.path(outputFolder, "export")
-)
+executionMetricsFile <- file.path(outputFolder, "executionMetrics.csv")
+readr::write_csv(result, executionMetricsFile)
+message(paste("Wrote metrics to", executionMetricsFile))
