@@ -3,6 +3,9 @@ library(SelfControlledCohort)
 controlsFolder <- outputFolder
 outputFolder <- file.path(outputFolder, "analyses/scc")
 
+if (!dir.exists(outputFolder)) dir.create(outputFolder, recursive = TRUE)
+message(paste("Created directory:", outputFolder))
+
 connectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = Sys.getenv("omop_db_dbms"),
   server = Sys.getenv("omop_db_server"),
@@ -45,7 +48,10 @@ sccAnalysis2 <- createSccAnalysis(
 
 sccAnalysisList <- list(sccAnalysis1, sccAnalysis2)
 
-allControls <- readr::read_csv(file.path(controlsFolder, "allControls.csv"))
+allControls <- readr::read_csv(
+  file = file.path(controlsFolder, "allControls.csv"),
+  show_col_types = FALSE
+)
 eos <- list()
 for (i in 1:nrow(allControls)) {
   eos[[length(eos) + 1]] <- SelfControlledCohort::createExposureOutcome(
@@ -69,7 +75,10 @@ sccResult <- SelfControlledCohort::runSccAnalyses(
 )
 
 sccSummary <- SelfControlledCohort::summarizeAnalyses(sccResult, outputFolder)
-readr::write_csv(sccSummary, file.path(outputFolder, "sccSummary.csv"))
+
+summaryDir <- file.path(outputFolder, "sccSummary.csv")
+readr::write_csv(sccSummary, summaryDir)
+message(paste("Summary written in", summaryDir))
 
 analysisRef <- data.frame(
   method = "SelfControlledCohort",

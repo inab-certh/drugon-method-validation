@@ -10,7 +10,10 @@ outputFolder <- file.path(outputFolder, "analyses/sccs")
 if (!dir.exists(outputFolder)) dir.create(outputFolder, recursive = TRUE)
 message(paste("Created directory:", outputFolder))
 
-allControls <- readr::read_csv(file.path(controlsFolder, "allControls.csv"))
+allControls <- readr::read_csv(
+  file = file.path(controlsFolder, "allControls.csv"),
+  show_col_types = FALSE
+)
 
 connectionDetails <- DatabaseConnector::createConnectionDetails(
   dbms = Sys.getenv("omop_db_dbms"),
@@ -95,7 +98,9 @@ sccsSummary <- referenceTable |>
   dplyr::select(exposuresOutcomeSetId, exposureId) |>
   dplyr::left_join(sccsSummary, by = "exposuresOutcomeSetId")
 
-readr::write_csv(sccsSummary, file.path(outputFolder, "sccsSummary.csv"))
+summaryDir <- file.path(outputFolder, "sccsSummary.csv")
+readr::write_csv(sccsSummary, summaryDir)
+message(paste("Summary written in", summaryDir))
 
 analysisRef <- data.frame(
   method = "SelfControlledCaseSeries",
